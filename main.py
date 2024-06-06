@@ -6,7 +6,7 @@ from aiogram.filters.command import Command
 from datetime import datetime as dt
 from random import randint
 
-TOKEN = ""
+TOKEN = "6783902078:AAGUKGuAiD3hwms6V08vcxM0gOiODjFGC-4"
 STARTING_MESSAGE = "Привет! Данный бот позволяет: \
                     \n 0. Вернуться в начало (покажет стартовое сообщение) \
                     \n 1. Запланировать тренировку \
@@ -273,24 +273,25 @@ async def parse_text(message: types.Message):
                 # обработка числа N, выдача сообщения о тренировках
                 try:
                     N = int(message.text)
-                    if N < 1:
-                        await message.answer(BAD_ARG_MSG)
                 except Exception:
                     await message.answer(BAD_ARG_MSG)
                 # считываем с бд и выводим N записей
-                try:
-                    trains = read_from_db(N)
-                    trains = trains[::-1]
-                    return_stroke = ""
-                    for train in trains:
-                        return_stroke += f"id: {train[0]}, дата и время: {train[1]}, координаты: {train[2]}, расстояние (км): {train[3]}, темп: {train[4]}, комментарий: {train[5]} \n\n"
-                    del CHAT_IDS[message.chat.id]
-                    if return_stroke != "":
-                        await message.answer(return_stroke)
-                    else:
-                        await message.answer("История пуста.")
-                except MyError as err:
-                    await message.answer(err.message)
+                if N > 1:
+                    try:
+                        trains = read_from_db(N)
+                        trains = trains[::-1]
+                        return_stroke = ""
+                        for train in trains:
+                            return_stroke += f"id: {train[0]}, дата и время: {train[1]}, координаты: {train[2]}, расстояние (км): {train[3]}, темп: {train[4]}, комментарий: {train[5]} \n\n"
+                        del CHAT_IDS[message.chat.id]
+                        if return_stroke != "":
+                            await message.answer(return_stroke)
+                        else:
+                            await message.answer("История пуста.")
+                    except MyError as err:
+                        await message.answer(err.message)
+                else:
+                    await message.answer(BAD_ARG_MSG)
               
                 
     else:
