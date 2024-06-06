@@ -276,7 +276,7 @@ async def parse_text(message: types.Message):
                 except Exception:
                     await message.answer(BAD_ARG_MSG)
                 # считываем с бд и выводим N записей
-                if N > 1:
+                if N > 0:
                     try:
                         trains = read_from_db(N)
                         trains = trains[::-1]
