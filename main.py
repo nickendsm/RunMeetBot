@@ -6,7 +6,7 @@ from aiogram.filters.command import Command
 from datetime import datetime as dt
 from random import randint
 
-TOKEN = ""
+TOKEN = "6783902078:AAGBMW9GEhHJJR3m_pqEr1Awz-MW2urAB8I"
 STARTING_MESSAGE = "Привет! Данный бот позволяет: \
                     \n 0. Вернуться в начало (покажет стартовое сообщение) \
                     \n 1. Запланировать тренировку \
@@ -17,7 +17,7 @@ FIRST_COMMAND = 1
 SECOND_COMMAND = 2
 THIRD_COMMAND = 3
 CHAT_IDS = {}
-
+DB_NAME = "new_db.db"
 COMMAND_LIST = [0, FIRST_COMMAND, SECOND_COMMAND, THIRD_COMMAND]
 
 MAX_ID = 31000
@@ -98,7 +98,7 @@ def handle_command(cmnd_id: int) -> str:
             return STARTING_MESSAGE
         
 
-def train_str_parser(train_input: str) -> int:
+def train_str_parser(train_input: str, chat_id: str) -> int:
     """
         Обработка строки о тренировке для записи
         train_input - строка в формате время;коорд;расст;темп;комментарий
@@ -149,7 +149,8 @@ def train_str_parser(train_input: str) -> int:
                       str(first_coord)+";"+str(sec_coord),
                       str(dist),
                       str(min_per_km)+":"+str(sec_per_km),
-                      train_list[-2]]
+                      train_list[-2],
+                      chat_id]
     write_to_db(input_to_write)
     return train_id
 
@@ -157,14 +158,14 @@ def write_to_db(input: list) -> None:
     """
         Функция записывает тренировку в БД
     """ 
-    try:
-        conn = sqlite3.connect('lastlase_db.db')
-        conn.execute(f"INSERT INTO train_data (id, datetime, coords, dist, veloc, comment) \
-                      VALUES ({input[0]}, '{input[1]}', '{input[2]}', '{input[3]}', '{input[4]}', '{input[5]}')")
-        conn.commit()
-        conn.close()
-    except Exception:
-        raise DBBad
+    # try:
+    conn = sqlite3.connect(DB_NAME)
+    conn.execute(f"INSERT INTO train_data (id, datetime, coords, dist, veloc, comment, id_chat) \
+                    VALUES ({input[0]}, '{input[1]}', '{input[2]}', '{input[3]}', '{input[4]}', '{input[5]}', '{input[6]}')")
+    conn.commit()
+    conn.close()
+    # except Exception:
+    #     raise DBBad
 
 def get_id_from_bd() -> list:
     """
@@ -181,7 +182,7 @@ def read_from_db(number: int = MAX_ID) -> list:
         Функция выдает number последних тренировок из БД
     """
     try:
-        conn = sqlite3.connect('lastlase_db.db')
+        conn = sqlite3.connect(DB_NAME)
         readed_list = conn.execute(f"SELECT * \
                     FROM (SELECT * \
                     FROM train_data \
@@ -198,10 +199,27 @@ def delete_from_db(id: int) -> None:
         Функция, удаляющая тренировку id
     """
     try:
-        conn = sqlite3.connect('lastlase_db.db')
+        conn = sqlite3.connect(DB_NAME)
         conn.execute(f"DELETE FROM train_data WHERE id = {str(id)};")
         conn.commit()
         conn.close()
+    except Exception:
+        raise DBBad
+
+def check_chat_id_by_train_id(id: int, chat_id: str) -> bool:
+    """
+        Получение id_chat для проверки по id тренировки
+    """
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        readed_list = conn.execute(f"SELECT id_chat FROM train_data \
+                                    WHERE id={id}").fetchall()
+        conn.close()
+        if str(readed_list[0][0]) == str(chat_id):
+            return True
+        else:
+            return False 
+    
     except Exception:
         raise DBBad
 
@@ -241,7 +259,7 @@ async def parse_text(message: types.Message):
             case 1:
                 # обработка строки о тренировке
                 try:
-                    ID_of_train = train_str_parser(message.text)
+                    ID_of_train = train_str_parser(message.text, str(message.chat.id))
                     del CHAT_IDS[message.chat.id]
                     await message.answer(SUCCESS_MSG + str(ID_of_train))
                 except MyError as err:
@@ -261,9 +279,12 @@ async def parse_text(message: types.Message):
                     # считаем есть ли такой id вообще 
                     ID_LIST = get_id_from_bd()
                     if id in ID_LIST:
-                        delete_from_db(id)
-                        del CHAT_IDS[message.chat.id]
-                        await message.answer(SUCCESS_DEL_MSG)
+                        if check_chat_id_by_train_id(id, message.chat.id):
+                            delete_from_db(id)
+                            del CHAT_IDS[message.chat.id]
+                            await message.answer(SUCCESS_DEL_MSG)
+                        else:
+                            await message.answer("Запись вам не пренадлежит. Введите другой ID")
                     else:
                         await message.answer(BAD_ID_MSG)
                 except MyError as err:
