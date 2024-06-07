@@ -6,7 +6,7 @@ from aiogram.filters.command import Command
 from datetime import datetime as dt
 from random import randint
 
-TOKEN = "6783902078:AAGBMW9GEhHJJR3m_pqEr1Awz-MW2urAB8I"
+TOKEN = ""
 STARTING_MESSAGE = "Привет! Данный бот позволяет: \
                     \n 0. Вернуться в начало (покажет стартовое сообщение) \
                     \n 1. Запланировать тренировку \
